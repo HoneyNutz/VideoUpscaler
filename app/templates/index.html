@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card p-6 mb-6">
+    <div id="upload-container" class="dropzone p-8 text-center cursor-pointer">
+        <div class="mb-4">
+            <i class="fas fa-cloud-upload-alt text-4xl text-gray-500"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">Drag & Drop your video here</h3>
+        <p class="text-gray-400 mb-4">or click to browse files</p>
+        <input type="file" id="file-input" class="hidden" accept="video/*">
+    </div>
+    
+    <div id="settings" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Upscale Factor</label>
+            <select id="scale" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
+                <option value="2">2x</option>
+                <option value="4" selected>4x</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Model</label>
+            <select id="model" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
+                <option value="RealESRGAN_x4plus">General Purpose</option>
+                <option value="realesr-animevideov3">Anime Video</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div id="progress-container" class="card p-6 mb-6 hidden">
+    <h3 class="text-lg font-semibold mb-4">Processing Video</h3>
+    <div class="mb-2 flex justify-between">
+        <span id="status-text">Preparing...</span>
+        <span id="progress-text">0%</span>
+    </div>
+    <div class="progress-bar mb-4">
+        <div id="progress-fill" class="progress-fill"></div>
+    </div>
+    <div id="download-section" class="hidden text-center mt-6">
+        <p class="text-green-400 mb-4">Processing complete!</p>
+        <a id="download-btn" href="#" class="btn-primary inline-block px-6 py-2 rounded-md">
+            <i class="fas fa-download mr-2"></i>Download Video
+        </a>
+    </div>
+    <div id="error-section" class="hidden text-center mt-6">
+        <p class="text-red-400 mb-4">An error occurred during processing.</p>
+        <p id="error-message" class="text-sm text-gray-400 mb-4"></p>
+        <button onclick="window.location.reload()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">
+            Try Again
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropzone = document.getElementById('upload-container');
+        const fileInput = document.getElementById('file-input');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const statusText = document.getElementById('status-text');
+        const downloadSection = document.getElementById('download-section');
+        const downloadBtn = document.getElementById('download-btn');
+        const errorSection = document.getElementById('error-section');
+        const errorMessage = document.getElementById('error-message');
+        
+        let currentTaskId = null;
+        
+        // Initialize Socket.IO
+        const socket = io();
+        
+        // Handle drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropzone.classList.add('dragover');
+        }
+        
+        function unhighlight() {
+            dropzone.classList.remove('dragover');
+        }
+        
+        // Handle file drop
+        dropzone.addEventListener('drop', handleDrop, false);
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+        
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+        
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            const file = files[0];
+            if (!file.type.startsWith('video/')) {
+                alert('Please select a video file');
+                return;
+            }
+            
+            uploadFile(file);
+        }
+        
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('scale', document.getElementById('scale').value);
+            formData.append('model', document.getElementById('model').value);
+            
+            // Show progress container
+            progressContainer.classList.remove('hidden');
+            dropzone.classList.add('hidden');
+            document.getElementById('settings').classList.add('hidden');
+            
+            // Reset UI
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+            statusText.textContent = 'Uploading...';
+            downloadSection.classList.add('hidden');
+            errorSection.classList.add('hidden');
+            
+            // Upload file
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                currentTaskId = data.task_id;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError(error.message || 'Failed to upload file');
+            });
+        }
+        
+        // Handle progress updates via WebSocket
+        socket.on('progress_update', function(data) {
+            if (data.task_id !== currentTaskId) return;
+            
+            if (data.progress !== undefined) {
+                const progress = Math.min(100, Math.max(0, data.progress));
+                progressBar.style.width = progress + '%';
+                progressText.textContent = Math.round(progress) + '%';
+            }
+            
+            if (data.status) {
+                statusText.textContent = data.status;
+            }
+            
+            if (data.status === 'completed') {
+                showDownload();
+            } else if (data.status === 'failed') {
+                showError(data.error || 'An unknown error occurred');
+            }
+        });
+        
+        function showDownload() {
+            downloadSection.classList.remove('hidden');
+            downloadBtn.href = `/download/upscaled_${currentTaskId}_${fileInput.files[0].name}`;
+        }
+        
+        function showError(message) {
+            errorSection.classList.remove('hidden');
+            errorMessage.textContent = message || 'An unknown error occurred';
+            statusText.textContent = 'Failed';
+        }
+        
+        // Check for existing task on page load
+        const urlParams = new URLSearchParams(window.location.search);
+        const taskId = urlParams.get('task_id');
+        if (taskId) {
+            currentTaskId = taskId;
+            progressContainer.classList.remove('hidden');
+            dropzone.classList.add('hidden');
+            document.getElementById('settings').classList.add('hidden');
+            
+            // Check task status
+            fetch(`/status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'completed') {
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100%';
+                        statusText.textContent = 'Processing complete';
+                        showDownload();
+                    } else if (data.status === 'failed') {
+                        showError(data.error || 'Processing failed');
+                    } else {
+                        // Task is still in progress
+                        progressBar.style.width = data.progress + '%';
+                        progressText.textContent = Math.round(data.progress) + '%';
+                        statusText.textContent = data.status || 'Processing...';
+                    }
+                });
+        }
+    });
+</script>
+{% endblock %}

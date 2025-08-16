@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Upscaler</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #111827;
+            --card-bg: #1f2937;
+            --text: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --border: #374151;
+        }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .dropzone.dragover {
+            border-color: var(--primary);
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+        
+        .progress-bar {
+            height: 0.5rem;
+            background-color: var(--border);
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold mb-2">Video Upscaler</h1>
+            <p class="text-gray-400">Enhance your videos using AI-powered upscaling</p>
+        </header>
+        
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+        
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>Powered by Real-ESRGAN</p>
+            <p class="mt-1">Drag and drop your video file to get started</p>
+        </footer>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
