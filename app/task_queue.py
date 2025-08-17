@@ -140,6 +140,7 @@ class TaskQueue:
                     logger.error(f"Error updating progress: {e}")
             
             # Initialize video processor
+            logger.info(f"Initializing VideoProcessor for task {task.id}: model={task.model}, scale={task.scale}")
             processor = VideoProcessor(
                 model_name=task.model,
                 scale=task.scale,
@@ -147,7 +148,9 @@ class TaskQueue:
             )
             
             # Process the video
+            logger.info(f"Starting video processing for task {task.id}: {task.input_path} -> {task.output_path}")
             processor.process_video(task.input_path, task.output_path)
+            logger.info(f"Video processing completed for task {task.id}")
             
             # Mark as completed
             task.status = TaskStatus.COMPLETED.value

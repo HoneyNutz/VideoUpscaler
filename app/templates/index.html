@@ -69,6 +69,7 @@
         const errorMessage = document.getElementById('error-message');
         
         let currentTaskId = null;
+        let outputFilename = null;
         
         // Initialize Socket.IO
         const socket = io();
@@ -178,7 +179,14 @@
             }
             
             if (data.status === 'completed') {
-                showDownload();
+                // Get output filename from task status
+                fetch(`/status/${currentTaskId}`)
+                    .then(response => response.json())
+                    .then(taskData => {
+                        outputFilename = taskData.output_filename;
+                        showDownload();
+                    })
+                    .catch(() => showDownload()); // Fallback if status fetch fails
             } else if (data.status === 'failed') {
                 showError(data.error || 'An unknown error occurred');
             }
@@ -186,7 +194,12 @@
         
         function showDownload() {
             downloadSection.classList.remove('hidden');
-            downloadBtn.href = `/download/upscaled_${currentTaskId}_${fileInput.files[0].name}`;
+            if (outputFilename) {
+                downloadBtn.href = `/download/${outputFilename}`;
+            } else {
+                // Fallback: try to construct filename from task ID
+                downloadBtn.href = `/download/upscaled_${currentTaskId}`;
+            }
         }
         
         function showError(message) {
@@ -212,6 +225,7 @@
                         progressBar.style.width = '100%';
                         progressText.textContent = '100%';
                         statusText.textContent = 'Processing complete';
+                        outputFilename = data.output_filename;
                         showDownload();
                     } else if (data.status === 'failed') {
                         showError(data.error || 'Processing failed');

@@ -189,16 +189,35 @@ class VideoProcessor:
             input_path (str): Path to the input video file
             output_path (str): Path to save the output video
         """
+        # Validate input file exists
+        if not os.path.exists(input_path):
+            raise ValueError(f"Input video file does not exist: {input_path}")
+        
         # Open the video file
         cap = cv2.VideoCapture(input_path)
         if not cap.isOpened():
-            raise ValueError(f"Could not open video file: {input_path}")
+            raise ValueError(f"Could not open video file: {input_path}. This may be due to an unsupported codec or corrupted file.")
         
         # Get video properties
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
+        # Validate video properties
+        if width <= 0 or height <= 0:
+            cap.release()
+            raise ValueError(f"Invalid video dimensions: {width}x{height}")
+        
+        if fps <= 0:
+            print(f"Warning: Invalid FPS ({fps}), defaulting to 30 FPS")
+            fps = 30.0
+        
+        if total_frames <= 0:
+            cap.release()
+            raise ValueError(f"Could not determine frame count: {total_frames}")
+        
+        print(f"Video info: {width}x{height}, {fps} FPS, {total_frames} frames")
         
         # Calculate output dimensions
         out_width = width * self.scale

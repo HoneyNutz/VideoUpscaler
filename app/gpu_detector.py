@@ -134,8 +134,13 @@ class GPUDetector:
             info.update({
                 "pytorch_version": torch.__version__,
                 "system": platform.system(),
-                "machine": platform.machine()
+                "machine": platform.machine(),
+                "gpu_memory_gb": 8.0  # Conservative estimate for Apple Silicon
             })
+        
+        # Ensure gpu_memory_gb is always present
+        if "gpu_memory_gb" not in info:
+            info["gpu_memory_gb"] = 4.0  # Default fallback for CPU or unknown GPU types
         
         return info
 

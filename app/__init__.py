@@ -45,7 +45,7 @@ def create_app(config=None):
     start_task_queue()
     
     # Initialize extensions
-    socketio.init_app(app, async_mode='threading', cors_allowed_origins="*")
+    socketio.init_app(app, async_mode='threading', cors_allowed_origins="*", logger=True, engineio_logger=True)
     
     # Register blueprints or routes
     register_routes(app)
@@ -174,14 +174,26 @@ def register_routes(app):
             if not task:
                 return jsonify({'error': 'Task not found'}), 404
             
+            # Extract output filename from path
+            output_filename = os.path.basename(task.output_path) if task.output_path else None
+            
             return jsonify({
                 'status': task.status,
                 'progress': task.progress,
                 'filename': task.original_filename,
+                'output_filename': output_filename,
                 'error': task.error_message
             })
         finally:
             db.close()
+    
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(
+            os.path.join(app.root_path, 'static'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon'
+        )
     
     @app.route('/download/<filename>')
     def download_file(filename):
