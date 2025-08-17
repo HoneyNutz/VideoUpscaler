@@ -197,7 +197,7 @@ def install_dependencies(gpu_type):
     
     # Install other dependencies
     other_deps = [
-        "numpy>=1.24.0",
+        "numpy>=1.24.0,<2.0.0",
         "opencv-python>=4.8.0",
         "tqdm>=4.65.0", 
         "basicsr>=1.4.2",
@@ -227,13 +227,12 @@ def verify_installation(gpu_type):
     """Verify that PyTorch is working with the detected GPU."""
     print("Verifying installation...")
     
-    test_script = f'''
-import torch
-print(f"PyTorch version: {{torch.__version__}}")
-print(f"CUDA available: {{torch.cuda.is_available()}}")
+    test_script = f'''import torch
+print("PyTorch version:", torch.__version__)
+print("CUDA available:", torch.cuda.is_available())
 
 if hasattr(torch.backends, "mps"):
-    print(f"MPS available: {{torch.backends.mps.is_available()}}")
+    print("MPS available:", torch.backends.mps.is_available())
 else:
     print("MPS not available (PyTorch < 1.12)")
 
@@ -244,19 +243,19 @@ if "{gpu_type}" == "cuda" and torch.cuda.is_available():
 elif "{gpu_type}" == "mps" and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 
-print(f"Using device: {{device}}")
+print("Using device:", device)
 x = torch.randn(3, 3).to(device)
-print(f"Test tensor created successfully on {{device}}")
+print("Test tensor created successfully on", device)
 
 # Test Real-ESRGAN import
 try:
     import realesrgan
     print("✅ Real-ESRGAN imported successfully")
 except ImportError as e:
-    print(f"❌ Real-ESRGAN import failed: {{e}}")
+    print("❌ Real-ESRGAN import failed:", str(e))
 '''
     
-    success, output, error = run_command(f'python -c "{test_script}"')
+    success, output, error = run_command(f"python -c '{test_script}'")
     if success:
         print("✅ Installation verification passed")
         print(output)
