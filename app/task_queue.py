@@ -152,11 +152,18 @@ class TaskQueue:
             processor.process_video(task.input_path, task.output_path)
             logger.info(f"Video processing completed for task {task.id}")
             
-            # Mark as completed
-            task.status = TaskStatus.COMPLETED.value
-            task.progress = 100.0
-            task.completed_at = datetime.utcnow()
-            db.commit()
+            # Mark as completed - refresh task from database first
+            current_task = db.query(ProcessingTask).filter(
+                ProcessingTask.id == task.id
+            ).first()
+            
+            if current_task:
+                current_task.status = TaskStatus.COMPLETED.value
+                current_task.progress = 100.0
+                current_task.completed_at = datetime.utcnow()
+                db.commit()
+                db.refresh(current_task)
+                logger.info(f"Task {task.id} marked as completed in database")
             
             logger.info(f"Task {task.id} completed successfully")
             
@@ -167,15 +174,22 @@ class TaskQueue:
         except Exception as e:
             logger.error(f"Task {task.id} failed: {e}", exc_info=True)
             
-            # Mark as failed
-            task.status = TaskStatus.FAILED.value
-            task.error_message = str(e)
-            task.completed_at = datetime.utcnow()
-            db.commit()
+            # Mark as failed - refresh task from database first
+            current_task = db.query(ProcessingTask).filter(
+                ProcessingTask.id == task.id
+            ).first()
+            
+            if current_task:
+                current_task.status = TaskStatus.FAILED.value
+                current_task.error_message = str(e)
+                current_task.completed_at = datetime.utcnow()
+                db.commit()
+                db.refresh(current_task)
+                logger.info(f"Task {task.id} marked as failed in database")
             
             # Notify failure
             if progress_callback:
-                progress_callback(task.id, task.progress, TaskStatus.FAILED.value)
+                progress_callback(task.id, current_task.progress if current_task else 0, TaskStatus.FAILED.value)
             
         finally:
             # Clean up progress callback
