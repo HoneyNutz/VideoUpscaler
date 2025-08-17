@@ -8,7 +8,16 @@
         </div>
         <h3 class="text-xl font-semibold mb-2">Drag & Drop your video here</h3>
         <p class="text-gray-400 mb-4">or click to browse files</p>
-        <input type="file" id="file-input" class="hidden" accept="video/*">
+        <p class="text-sm text-blue-400 mb-2">📱 3GP files supported - 6 AI models available!</p>
+        <div class="text-xs text-gray-500 mt-2">
+            <span class="inline-block bg-gray-700 px-2 py-1 rounded mr-2 mb-1">.mp4</span>
+            <span class="inline-block bg-gray-700 px-2 py-1 rounded mr-2 mb-1">.avi</span>
+            <span class="inline-block bg-gray-700 px-2 py-1 rounded mr-2 mb-1">.mov</span>
+            <span class="inline-block bg-gray-700 px-2 py-1 rounded mr-2 mb-1">.mkv</span>
+            <span class="inline-block bg-blue-600 px-2 py-1 rounded mr-2 mb-1">.3gp</span>
+            <span class="inline-block bg-blue-600 px-2 py-1 rounded mr-2 mb-1">.3g2</span>
+        </div>
+        <input type="file" id="file-input" class="hidden" accept="video/*,.3gp,.3g2">
     </div>
     
     <div id="settings" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -20,11 +29,18 @@
             </select>
         </div>
         <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Model</label>
+            <label class="block text-sm font-medium text-gray-300 mb-1">AI Model</label>
             <select id="model" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
-                <option value="RealESRGAN_x4plus">General Purpose</option>
-                <option value="realesr-animevideov3">Anime Video</option>
+                <option value="RealESRGAN_x4plus">🎯 General Purpose (Best for 3GP) - 67MB</option>
+                <option value="realesr-general-x4v3" selected>✨ General Balanced (Recommended) - 32MB</option>
+                <option value="RealESRNet_x4plus">🔍 Enhanced Detail Preservation - 67MB</option>
+                <option value="RealESRGAN_x2plus">⚡ 2x Upscaling (Faster) - 67MB</option>
+                <option value="realesr-animevideov3">🎨 Anime Video (Temporal Consistency) - 32MB</option>
+                <option value="RealESRGAN_x4plus_anime_6B">🚀 Anime Images (Small & Fast) - 17MB</option>
             </select>
+            <div class="text-xs text-gray-400 mt-1">
+                <span id="model-description">Balanced model with good quality and performance</span>
+            </div>
         </div>
     </div>
 </div>
@@ -105,6 +121,24 @@
         dropzone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect, false);
         
+        // Model selection handler
+        const modelSelect = document.getElementById('model');
+        const modelDescription = document.getElementById('model-description');
+        
+        const modelDescriptions = {
+            'RealESRGAN_x4plus': 'Best for 3GP mobile videos, photos, and real-world content',
+            'realesr-general-x4v3': 'Balanced model with good quality and performance',
+            'RealESRNet_x4plus': 'Enhanced detail preservation for high-quality images',
+            'RealESRGAN_x2plus': 'Faster 2x upscaling for large videos and quick processing',
+            'realesr-animevideov3': 'Specialized for anime videos with temporal consistency',
+            'RealESRGAN_x4plus_anime_6B': 'Compact anime model - fastest processing'
+        };
+        
+        modelSelect.addEventListener('change', function() {
+            const selectedModel = this.value;
+            modelDescription.textContent = modelDescriptions[selectedModel] || 'Select a model for upscaling';
+        });
+        
         function handleDrop(e) {
             const dt = e.dataTransfer;
             const files = dt.files;
@@ -120,9 +154,49 @@
             if (files.length === 0) return;
             
             const file = files[0];
-            if (!file.type.startsWith('video/')) {
-                alert('Please select a video file');
+            const fileName = file.name.toLowerCase();
+            const is3GP = fileName.endsWith('.3gp') || fileName.endsWith('.3g2');
+            
+            // Debug logging
+            console.log('File details:', {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                fileName: fileName,
+                is3GP: is3GP
+            });
+            
+            // Check if it's a supported video file
+            const isVideoType = file.type.startsWith('video/');
+            const supportedExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.3gp', '.3g2'];
+            const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
+            
+            console.log('Validation:', {
+                isVideoType: isVideoType,
+                hasValidExtension: hasValidExtension,
+                willPass: isVideoType || hasValidExtension
+            });
+            
+            if (!isVideoType && !hasValidExtension) {
+                console.error('File validation failed for:', fileName);
+                alert('Please select a video file (MP4, AVI, MOV, 3GP, etc.)');
                 return;
+            }
+            
+            console.log('File validation passed, proceeding with upload');
+            
+            // Show 3GP-specific message and suggest best model
+            if (is3GP) {
+                console.log('📱 3GP file detected - applying mobile video optimizations');
+                
+                // Suggest best model for 3GP
+                const modelSelect = document.getElementById('model');
+                const modelDescription = document.getElementById('model-description');
+                
+                if (modelSelect.value !== 'RealESRGAN_x4plus') {
+                    // Show suggestion without changing selection
+                    modelDescription.innerHTML = '<span class="text-blue-400">💡 Tip: RealESRGAN_x4plus works best for 3GP files</span>';
+                }
             }
             
             uploadFile(file);

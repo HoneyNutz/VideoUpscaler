@@ -25,8 +25,8 @@ def create_app(config=None):
     # Default configuration
     app.config.update(
         SECRET_KEY=os.environ.get('SECRET_KEY') or 'dev-key-please-change',
-        UPLOAD_FOLDER='uploads',
-        PROCESSED_FOLDER='processed',
+        UPLOAD_FOLDER=os.path.abspath('uploads'),
+        PROCESSED_FOLDER=os.path.abspath('processed'),
         MAX_CONTENT_LENGTH=2 * 1024 * 1024 * 1024,  # 2GB max file size
     )
     
@@ -74,11 +74,11 @@ def register_routes(app):
                 return jsonify({'error': 'No selected file'}), 400
             
             # Validate file extension
-            allowed_extensions = {'mp4', 'avi', 'mov', 'mkv'}
+            allowed_extensions = {'mp4', 'avi', 'mov', 'mkv', '3gp', '3g2'}
             file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
             if file_ext not in allowed_extensions:
                 logger.error(f'Invalid file extension: {file.filename}')
-                return jsonify({'error': 'Invalid file type. Allowed types: ' + ', '.join(allowed_extensions)}), 400
+                return jsonify({'error': 'Invalid file type. Allowed types: ' + ', '.join(sorted(allowed_extensions))}), 400
             
             # Generate a unique task ID
             task_id = str(uuid.uuid4())
@@ -90,7 +90,16 @@ def register_routes(app):
             # Save the uploaded file
             filename = secure_filename(f"{task_id}_{file.filename}")
             input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            output_path = os.path.join(app.config['PROCESSED_FOLDER'], f"upscaled_{filename}")
+            
+            # Handle 3GP to MP4 conversion for output path
+            if file.filename.lower().endswith(('.3gp', '.3g2')):
+                # Convert 3GP extension to MP4 for output
+                base_name = os.path.splitext(filename)[0]
+                output_filename = f"upscaled_{base_name}.mp4"
+            else:
+                output_filename = f"upscaled_{filename}"
+            
+            output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
             
             try:
                 file.save(input_path)

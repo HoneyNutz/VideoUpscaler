@@ -6,14 +6,16 @@ A self-contained Python application for upscaling videos using Real-ESRGAN, feat
 
 ## Features
 
-- **Web Interface**: Modern, dark-themed UI with drag-and-drop support
-- **CLI**: Command-line interface for batch processing and automation
-- **Multiple Models**: Support for different Real-ESRGAN models
-- **Real-time Progress**: Track video processing progress in real-time
-- **Self-Contained**: No external dependencies like Redis or Celery required
-- **Persistent Tasks**: SQLite-based task queue with automatic recovery
-- **GPU Acceleration**: Optimized for CUDA, MPS (Apple Silicon), and CPU
-- **Cross-platform**: Works on Windows, macOS, and Linux
+- **🌐 Web Interface**: Modern, dark-themed UI with drag-and-drop support
+- **⚡ CLI**: Command-line interface for batch processing and automation
+- **🎯 6 AI Models**: Professional Real-ESRGAN models for different content types
+- **📱 3GP Support**: Specialized mobile video upscaling with optimizations
+- **📊 Real-time Progress**: Track video processing progress in real-time
+- **🔧 Self-Contained**: No external dependencies like Redis or Celery required
+- **💾 Persistent Tasks**: SQLite-based task queue with automatic recovery
+- **🚀 GPU Acceleration**: Optimized for CUDA, MPS (Apple Silicon), and CPU
+- **🌍 Cross-platform**: Works on Windows, macOS, and Linux
+- **📦 Batch Processing**: Process entire directories of videos efficiently
 
 ## Prerequisites
 
@@ -99,9 +101,22 @@ Download the Real-ESRGAN model(s) and place them in the `models` directory:
 2. Create a `models` directory if it doesn't exist
 3. Place the downloaded `.pth` files in the `models` directory
 
-Supported models:
-- `RealESRGAN_x4plus.pth` (general purpose, 4x upscaling)
-- `realesr-animevideov3.pth` (optimized for anime videos, 4x upscaling)
+**Supported Models** (6 total):
+- `RealESRGAN_x4plus.pth` - General purpose, best for 3GP/photos (67MB)
+- `realesr-general-x4v3.pth` - Balanced general purpose, recommended (32MB)
+- `RealESRNet_x4plus.pth` - Enhanced detail preservation (67MB)
+- `RealESRGAN_x2plus.pth` - 2x upscaling, faster processing (67MB)
+- `realesr-animevideov3.pth` - Anime videos with temporal consistency (32MB)
+- `RealESRGAN_x4plus_anime_6B.pth` - Compact anime model (17MB)
+
+**Quick Download**:
+```bash
+# Download all models automatically
+uv run python download_models.py
+
+# Or download specific model
+uv run python download_models.py --model RealESRGAN_x4plus
+```
 
 ## Usage
 
@@ -126,36 +141,102 @@ Then open your browser to [http://localhost:5001](http://localhost:5001)
 
 ### Command Line Interface
 
-Basic usage:
+#### Basic Usage
 ```bash
-python video_upscaler.py input.mp4 -o output.mp4
+# Single file upscaling
+uv run python video_upscaler.py input.mp4 -o output.mp4
+
+# 3GP mobile video (auto-converts to MP4)
+uv run python video_upscaler.py old_phone_video.3gp
+
+# Batch process directory
+uv run python video_upscaler.py /path/to/videos --batch
 ```
 
 #### CLI Options
 
-- `input`: Path to the input video file
-- `-o, --output`: Output file path (default: adds `_x4` before the file extension)
-- `--model`: Model to use (`RealESRGAN_x4plus` or `realesr-animevideov3`, default: `RealESRGAN_x4plus`)
+- `input`: Path to input video file or directory (for batch mode)
+- `-o, --output`: Output file path (default: adds `_x4` suffix)
+- `--model`: AI model to use (6 options, see `--list-models`)
 - `--scale`: Upscaling factor (2 or 4, default: 4)
-- `--tile`: Tile size for processing (0 for no tiling, useful for large videos, default: 0)
+- `--batch`: Process all videos in input directory
+- `--extensions`: File types to process (default: .mp4 .avi .mov .mkv .3gp .3g2)
+- `--workers`: Parallel workers for batch mode (default: 1)
+- `--tile`: Tile size for large videos (0 for auto, default: 0)
 - `--fp32`: Use FP32 precision (default: FP16)
+- `--test-3gp`: Test 3GP file support
+- `--list-models`: Show all available models with descriptions
 
 #### CLI Examples
 
-1. Basic upscaling:
-   ```bash
-   python video_upscaler.py input.mp4 -o output_4k.mp4
-   ```
+**Single File Processing:**
+```bash
+# Basic 4x upscaling
+uv run python video_upscaler.py input.mp4 -o output_4k.mp4
 
-2. Upscale with anime-optimized model:
-   ```bash
-   python video_upscaler.py anime.mp4 --model realesr-animevideov3 -o anime_upscaled.mp4
-   ```
+# 3GP mobile video (best model)
+uv run python video_upscaler.py old_mobile.3gp --model RealESRGAN_x4plus
 
-3. 2x upscaling with tiling for large videos:
-   ```bash
-   python video_upscaler.py large_video.mp4 --scale 2 --tile 400 -o large_upscaled.mp4
-   ```
+# Anime content with specialized model
+uv run python video_upscaler.py anime.mp4 --model realesr-animevideov3
+
+# Fast 2x upscaling for large files
+uv run python video_upscaler.py large_video.mp4 --model RealESRGAN_x2plus --scale 2
+```
+
+**Batch Processing:**
+```bash
+# Process all videos in directory
+uv run python video_upscaler.py ./videos --batch
+
+# Process only 3GP files with anime model
+uv run python video_upscaler.py ./mobile_archive --batch --extensions .3gp .3g2 --model realesr-animevideov3
+
+# Custom output directory
+uv run python video_upscaler.py ./input --batch -o ./upscaled_output
+```
+
+**Utility Commands:**
+```bash
+# List all available models
+uv run python video_upscaler.py --list-models
+
+# Test 3GP support
+uv run python video_upscaler.py --test-3gp
+
+# Clean up uploads and database
+uv run python video_upscaler.py --cleanup
+
+# Download models
+uv run python download_models.py --model realesr-general-x4v3
+```
+
+## Cleanup & Maintenance
+
+### Storage Management
+The cleanup utility helps manage disk space and database records:
+
+```bash
+# Show current storage usage
+uv run python cleanup.py --info
+
+# Clean everything (uploads, processed files, database)
+uv run python cleanup.py --all
+
+# Clean specific components
+uv run python cleanup.py --uploads      # Clear uploaded files
+uv run python cleanup.py --processed    # Clear processed videos
+uv run python cleanup.py --database     # Clear task records
+
+# Skip confirmation prompt
+uv run python cleanup.py --all --confirm
+```
+
+### Via CLI Integration
+```bash
+# Quick cleanup through main CLI
+uv run python video_upscaler.py --cleanup
+```
 
 ## Performance Tips
 
@@ -166,6 +247,7 @@ python video_upscaler.py input.mp4 -o output.mp4
 - **Large Videos**: Use the `--tile` option to process in smaller chunks
 - **Memory Usage**: Lower the tile size if you encounter out-of-memory errors
 - **Batch Processing**: Use the CLI for batch processing multiple files
+- **Storage Management**: Use `cleanup.py` to manage disk space and clear old files
 - **Concurrent Tasks**: Web interface supports multiple simultaneous video processing
 - **Output Quality**: Higher scale factors require more processing time and memory
 

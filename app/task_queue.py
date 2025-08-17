@@ -149,8 +149,14 @@ class TaskQueue:
             
             # Process the video
             logger.info(f"Starting video processing for task {task.id}: {task.input_path} -> {task.output_path}")
+            original_output_path = task.output_path
             processor.process_video(task.input_path, task.output_path)
             logger.info(f"Video processing completed for task {task.id}")
+            
+            # Check if output path was modified during processing (3GP -> MP4 conversion)
+            actual_output_path = task.output_path
+            if task.input_path.lower().endswith(('.3gp', '.3g2')) and not task.output_path.lower().endswith('.mp4'):
+                actual_output_path = os.path.splitext(task.output_path)[0] + '.mp4'
             
             # Mark as completed - refresh task from database first
             current_task = db.query(ProcessingTask).filter(
@@ -161,6 +167,10 @@ class TaskQueue:
                 current_task.status = TaskStatus.COMPLETED.value
                 current_task.progress = 100.0
                 current_task.completed_at = datetime.utcnow()
+                # Update output path if it was converted
+                if actual_output_path != original_output_path:
+                    current_task.output_path = actual_output_path
+                    logger.info(f"Updated output path for 3GP conversion: {actual_output_path}")
                 db.commit()
                 db.refresh(current_task)
                 logger.info(f"Task {task.id} marked as completed in database")
@@ -173,6 +183,7 @@ class TaskQueue:
             
         except Exception as e:
             logger.error(f"Task {task.id} failed: {e}", exc_info=True)
+            logger.error(f"Task details - Input: {task.input_path}, Output: {task.output_path}, Model: {task.model}, Scale: {task.scale}")
             
             # Mark as failed - refresh task from database first
             current_task = db.query(ProcessingTask).filter(

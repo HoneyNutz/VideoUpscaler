@@ -37,12 +37,16 @@ def download_file(url, destination):
 
 MODELS = {
     'RealESRGAN_x4plus': 'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth',
+    'RealESRGAN_x4plus_anime_6B': 'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth',
+    'RealESRNet_x4plus': 'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.1/RealESRNet_x4plus.pth',
+    'RealESRGAN_x2plus': 'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth',
     'realesr-animevideov3': 'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-animevideov3.pth',
+    'realesr-general-x4v3': 'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth',
 }
 
 def main():
     parser = argparse.ArgumentParser(description='Download Real-ESRGAN models')
-    parser.add_argument('--model', choices=['all', 'RealESRGAN_x4plus', 'realesr-animevideov3'], 
+    parser.add_argument('--model', choices=['all'] + list(MODELS.keys()), 
                        default='all', help='Model to download (default: all)')
     parser.add_argument('--output-dir', default='models', help='Directory to save models (default: models/)')
     
