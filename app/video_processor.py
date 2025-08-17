@@ -12,7 +12,7 @@ from pathlib import Path
 from .gpu_detector import gpu_detector
 
 class VideoProcessor:
-    def __init__(self, model_name='RealESRGAN_x4plus', scale=4, tile=0, fp32=False, progress_callback=None):
+    def __init__(self, model_name='RealESRGAN_x4plus', scale=4, tile=0, fp32=False, progress_callback=None, max_memory_gb=4):
         """
         Initialize the VideoProcessor.
         
@@ -22,10 +22,12 @@ class VideoProcessor:
             tile (int): Tile size for processing (0 for no tiling)
             fp32 (bool): Use FP32 precision if True, otherwise FP16
             progress_callback (callable): Callback function for progress updates
+            max_memory_gb (float): Maximum memory to use for frame buffering
         """
         self.scale = scale
         self.tile = tile
         self.fp32 = fp32
+        self.max_memory_gb = max_memory_gb
         self.progress_callback = progress_callback or (lambda p, s: None)
         self.upsampler = self._initialize_upsampler(model_name)
     
@@ -118,6 +120,67 @@ class VideoProcessor:
         # Convert back to BGR
         return cv2.cvtColor(output, cv2.COLOR_RGB2BGR)
     
+    def process_frames_batch(self, frames, batch_size=4):
+        """Process multiple frames in batches for better GPU utilization."""
+        processed_frames = []
+        device = gpu_detector.get_device()
+        
+        # Process frames in batches
+        for i in range(0, len(frames), batch_size):
+            batch = frames[i:i + batch_size]
+            batch_results = []
+            
+            with torch.no_grad():
+                for frame in batch:
+                    # Convert BGR to RGB
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    
+                    # Upscale the frame
+                    output, _ = self.upsampler.enhance(
+                        frame_rgb,
+                        outscale=self.scale
+                    )
+                    
+                    # Convert back to BGR and store
+                    batch_results.append(cv2.cvtColor(output, cv2.COLOR_RGB2BGR))
+                
+                # Synchronize once per batch for better performance
+                if device.type == 'mps' and hasattr(torch, 'mps') and hasattr(torch.mps, 'synchronize'):
+                    torch.mps.synchronize()
+                elif device.type == 'cuda':
+                    torch.cuda.synchronize()
+            
+            processed_frames.extend(batch_results)
+        
+        return processed_frames
+    
+    def _calculate_memory_usage(self, width, height, frames_count):
+        """Calculate memory usage for frame buffer in GB."""
+        # Estimate: 3 bytes per pixel (RGB) * 2 (input + output) * frames
+        bytes_per_frame = width * height * 3 * 2
+        total_bytes = bytes_per_frame * frames_count
+        return total_bytes / (1024 ** 3)  # Convert to GB
+    
+    def _get_optimal_chunk_size(self, width, height, total_frames):
+        """Calculate optimal chunk size based on memory constraints."""
+        # Start with desired batch size and adjust based on memory
+        gpu_info = gpu_detector.get_device_info()
+        if gpu_info['gpu_memory_gb'] >= 16:
+            base_chunk = 100
+        elif gpu_info['gpu_memory_gb'] >= 8:
+            base_chunk = 50
+        else:
+            base_chunk = 25
+        
+        # Adjust based on memory usage
+        while base_chunk > 1:
+            memory_usage = self._calculate_memory_usage(width, height, base_chunk)
+            if memory_usage <= self.max_memory_gb:
+                break
+            base_chunk //= 2
+        
+        return max(1, min(base_chunk, total_frames))
+    
     def process_video(self, input_path, output_path):
         """
         Process a video file and save the upscaled version.
@@ -149,7 +212,7 @@ class VideoProcessor:
             temp_frames_dir = os.path.join(temp_dir, 'frames')
             os.makedirs(temp_frames_dir, exist_ok=True)
             
-            # Process each frame with batch optimizations
+            # Process frames with batch optimization
             frame_paths = []
             frame_count = 0
             
@@ -160,28 +223,53 @@ class VideoProcessor:
             elif device.type == 'cuda':
                 torch.cuda.empty_cache()
             
-            for _ in tqdm(range(total_frames), desc="Processing frames"):
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                
-                # Process the frame
-                processed_frame = self.process_frame(frame)
-                
-                # Save the processed frame with optimized compression
-                frame_path = os.path.join(temp_frames_dir, f'frame_{frame_count:06d}.png')
-                # Use faster PNG compression for temporary files
-                cv2.imwrite(frame_path, processed_frame, [cv2.IMWRITE_PNG_COMPRESSION, 1])
-                frame_paths.append(frame_path)
-                
-                # Update progress
-                frame_count += 1
-                progress = int((frame_count / total_frames) * 90)  # Reserve 10% for video creation
-                self.progress_callback(progress, f'Processing frame {frame_count}/{total_frames}')
-                
-                # Periodic memory cleanup for long videos
-                if frame_count % 50 == 0:
-                    device = gpu_detector.get_device()
+            # Calculate optimal chunk size for memory streaming
+            chunk_size = self._get_optimal_chunk_size(width, height, total_frames)
+            
+            # Determine batch size for GPU processing
+            gpu_info = gpu_detector.get_device_info()
+            if gpu_info['gpu_memory_gb'] >= 16:
+                batch_size = 8
+            elif gpu_info['gpu_memory_gb'] >= 8:
+                batch_size = 4
+            else:
+                batch_size = 2
+            
+            print(f"Processing {total_frames} frames in chunks of {chunk_size}, batch size {batch_size}")
+            
+            # Process video in chunks to manage memory
+            with tqdm(total=total_frames, desc="Processing frames") as pbar:
+                for chunk_start in range(0, total_frames, chunk_size):
+                    chunk_end = min(chunk_start + chunk_size, total_frames)
+                    chunk_frames = []
+                    
+                    # Read chunk of frames
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, chunk_start)
+                    for i in range(chunk_start, chunk_end):
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+                        chunk_frames.append(frame)
+                    
+                    if not chunk_frames:
+                        break
+                    
+                    # Process chunk in batches
+                    processed_chunk = self.process_frames_batch(chunk_frames, batch_size)
+                    
+                    # Save processed frames
+                    for i, processed_frame in enumerate(processed_chunk):
+                        frame_idx = chunk_start + i
+                        frame_path = os.path.join(temp_frames_dir, f'frame_{frame_idx:06d}.png')
+                        cv2.imwrite(frame_path, processed_frame, [cv2.IMWRITE_PNG_COMPRESSION, 1])
+                        frame_paths.append(frame_path)
+                        
+                        progress = int((frame_idx + 1) / total_frames * 90)
+                        self.progress_callback(progress, f'Processing frame {frame_idx + 1}/{total_frames}')
+                        pbar.update(1)
+                    
+                    # Clear memory after each chunk
+                    del chunk_frames, processed_chunk
                     if device.type == 'mps' and hasattr(torch, 'mps') and hasattr(torch.mps, 'empty_cache'):
                         torch.mps.empty_cache()
                     elif device.type == 'cuda':
@@ -213,7 +301,11 @@ class VideoProcessor:
             for frame_path in frame_paths:
                 f.write(f"file '{frame_path}'\n")
         
-        # Use ffmpeg to create the video with hardware acceleration
+        # Use ffmpeg with hardware acceleration based on platform
+        device = gpu_detector.get_device()
+        gpu_info = gpu_detector.get_device_info()
+        
+        # Base ffmpeg command
         ffmpeg_cmd = [
             'ffmpeg',
             '-y',  # Overwrite output file if it exists
@@ -221,14 +313,39 @@ class VideoProcessor:
             '-safe', '0',
             '-r', str(fps),
             '-i', list_file,
-            '-c:v', 'libx264',
-            '-pix_fmt', 'yuv420p',
-            '-vf', f'scale={width}:{height}:force_original_aspect_ratio=decrease',
-            '-preset', 'fast',  # Faster encoding for M4 Mac
-            '-crf', '20',  # Slightly higher CRF for faster encoding
-            '-threads', '0',  # Use all available CPU cores
-            output_path
         ]
+        
+        # Add hardware acceleration based on platform
+        if gpu_info['gpu_type'] == 'mps':
+            # Use VideoToolbox hardware encoder on macOS
+            ffmpeg_cmd.extend([
+                '-c:v', 'h264_videotoolbox',
+                '-b:v', '10M',  # Higher bitrate for quality
+                '-pix_fmt', 'yuv420p',
+            ])
+        elif gpu_info['gpu_type'] == 'cuda':
+            # Use NVENC hardware encoder on NVIDIA GPUs
+            ffmpeg_cmd.extend([
+                '-c:v', 'h264_nvenc',
+                '-preset', 'fast',
+                '-crf', '20',
+                '-pix_fmt', 'yuv420p',
+            ])
+        else:
+            # Fallback to software encoding
+            ffmpeg_cmd.extend([
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-crf', '20',
+                '-pix_fmt', 'yuv420p',
+                '-threads', '0',  # Use all available CPU cores
+            ])
+        
+        # Add scaling and output path
+        ffmpeg_cmd.extend([
+            '-vf', f'scale={width}:{height}:force_original_aspect_ratio=decrease',
+            output_path
+        ])
         
         try:
             subprocess.run(ffmpeg_cmd, check=True, capture_output=True, text=True)
