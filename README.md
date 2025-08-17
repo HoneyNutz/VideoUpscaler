@@ -26,29 +26,48 @@ A self-contained Python application for upscaling videos using Real-ESRGAN, feat
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/video-upscaler.git
-cd video-upscaler
+git clone https://github.com/HoneyNutz/VideoUpscaler.git
+cd VideoUpscaler
 ```
 
-### 2. Automatic GPU Detection & Setup (Recommended)
+### 2. Simple Installation with UV (Recommended)
 
-The VideoUpscaler automatically detects your GPU and installs the optimal PyTorch version:
+Since we've fixed the dependency issues, you can now install directly with UV:
 
 ```bash
 # Install UV if you haven't already
 curl -sSf https://astral.sh/uv/install.sh | sh
 
-# Run the cross-platform installer
-python install.py
+# Create virtual environment
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install with all dependencies (auto-detects GPU)
+uv pip install -e ".[web]"
+
+# Download models
+python download_models.py
+
+# Start the web interface
+python run_web.py
 ```
 
 This will:
-- ✅ Detect your GPU type (NVIDIA CUDA, Apple MPS, AMD ROCm, or CPU)
-- ✅ Install the optimal PyTorch version for your hardware
-- ✅ Configure all dependencies automatically
-- ✅ Verify the installation works correctly
+- ✅ Install PyTorch with MPS/CUDA/CPU support automatically
+- ✅ Install all AI dependencies with proper version constraints
+- ✅ Download Real-ESRGAN models for video upscaling
+- ✅ Start the web interface on http://localhost:5001
 
-### 3. Manual Installation (Alternative)
+### 3. Alternative: GPU Detection Script
+
+If you prefer the automatic GPU detection installer:
+
+```bash
+# After cloning and creating UV environment
+python install.py
+```
+
+### 4. Manual Installation (Advanced)
 
 #### Using UV
 
