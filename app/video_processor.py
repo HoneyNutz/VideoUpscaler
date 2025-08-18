@@ -616,13 +616,14 @@ class VideoProcessor:
             # Update status
             self.progress_callback(95, 'Creating output video...')
             
-            # Create video from processed frames using ffmpeg
+            # Create video from processed frames using ffmpeg, and mux original audio
             self._create_video_from_frames(
-                frame_paths, 
-                output_path, 
-                fps, 
-                out_width, 
-                out_height
+                frame_paths,
+                output_path,
+                fps,
+                out_width,
+                out_height,
+                input_path
             )
             
             # Update status
@@ -632,8 +633,8 @@ class VideoProcessor:
             if optimizations['is_3gp'] and output_path.lower().endswith('.mp4'):
                 print(f"📱➡️🎬 3GP successfully converted to MP4: {Path(output_path).name}")
     
-    def _create_video_from_frames(self, frame_paths, output_path, fps, width, height):
-        """Create a video from processed frames using ffmpeg."""
+    def _create_video_from_frames(self, frame_paths, output_path, fps, width, height, source_video_path):
+        """Create a video from processed frames using ffmpeg and mux original audio if present."""
         # Create a temporary file with the list of frames
         list_file = os.path.join(os.path.dirname(frame_paths[0]), 'frame_list.txt')
         with open(list_file, 'w') as f:
@@ -644,7 +645,7 @@ class VideoProcessor:
         device = gpu_detector.get_device()
         gpu_info = gpu_detector.get_device_info()
         
-        # Base ffmpeg command
+        # Base ffmpeg command: input 0 = frames list, input 1 = original video (for audio)
         ffmpeg_cmd = [
             'ffmpeg',
             '-y',  # Overwrite output file if it exists
@@ -652,6 +653,7 @@ class VideoProcessor:
             '-safe', '0',
             '-r', str(fps),
             '-i', list_file,
+            '-i', source_video_path,
         ]
         
         # Add hardware acceleration based on platform
@@ -680,7 +682,30 @@ class VideoProcessor:
                 '-threads', '0',  # Use all available CPU cores
             ])
         
-        # Add scaling and output path
+        # Audio handling: map video from frames (input 0) and audio from source (input 1, optional)
+        # Choose audio codec based on container
+        from pathlib import Path as _P
+        ext = _P(output_path).suffix.lower()
+        audio_codec_args = []
+        if ext in ['.mp4', '.m4v', '.mov']:
+            # Ensure MP4-compatible audio
+            audio_codec_args = ['-c:a', 'aac', '-b:a', '160k']
+        else:
+            # Copy when possible for other containers
+            audio_codec_args = ['-c:a', 'copy']
+
+        # Map streams and finalize filters
+        ffmpeg_cmd.extend([
+            '-map', '0:v:0',
+            '-map', '1:a?',
+            *audio_codec_args,
+            '-shortest',
+        ])
+
+        # Add scaling and mp4 faststart (if applicable) and output path
+        if ext in ['.mp4', '.m4v', '.mov']:
+            ffmpeg_cmd.extend(['-movflags', '+faststart'])
+
         ffmpeg_cmd.extend([
             '-vf', f'scale={width}:{height}:force_original_aspect_ratio=decrease',
             output_path

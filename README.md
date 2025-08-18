@@ -125,23 +125,21 @@ uv run python download_models.py --model RealESRGAN_x4plus
 Start the web server:
 
 ```bash
-python run_web.py
+# Option 1: Interactive main menu (recommended for beginners)
+uv run python main_menu.py
+
+# Option 2: Direct web interface
+uv run python run_web.py
 ```
 
-Then open your browser to [http://localhost:5001](http://localhost:5001)
+This provides a guided interface for all features including single file processing, batch operations, model downloads, and cleanup.
 
-#### Web Interface Features
-- Drag and drop video files
-- Select upscale factor (2x or 4x)
-- Choose between different models
-- Real-time progress updates via WebSocket
-- Persistent task management
-- Download upscaled videos
-- Task history and status tracking
+## CLI Mode
 
 ### Command Line Interface
 
-#### Basic Usage
+Direct command-line usage for automation and power users:
+
 ```bash
 # Single file upscaling
 uv run python video_upscaler.py input.mp4 -o output.mp4
@@ -153,7 +151,7 @@ uv run python video_upscaler.py old_phone_video.3gp
 uv run python video_upscaler.py /path/to/videos --batch
 ```
 
-#### CLI Options
+### CLI Options
 
 - `input`: Path to input video file or directory (for batch mode)
 - `-o, --output`: Output file path (default: adds `_x4` suffix)
@@ -166,8 +164,9 @@ uv run python video_upscaler.py /path/to/videos --batch
 - `--fp32`: Use FP32 precision (default: FP16)
 - `--test-3gp`: Test 3GP file support
 - `--list-models`: Show all available models with descriptions
+- `--cleanup`: Clean up uploads and database
 
-#### CLI Examples
+### CLI Examples
 
 **Single File Processing:**
 ```bash
@@ -198,6 +197,9 @@ uv run python video_upscaler.py ./input --batch -o ./upscaled_output
 
 **Utility Commands:**
 ```bash
+# Interactive main menu (easiest way to get started)
+uv run python main_menu.py
+
 # List all available models
 uv run python video_upscaler.py --list-models
 
@@ -210,6 +212,61 @@ uv run python video_upscaler.py --cleanup
 # Download models
 uv run python download_models.py --model realesr-general-x4v3
 ```
+
+## Web UI/Flask Interface
+
+### Starting the Web Interface
+
+Launch the modern web interface with real-time progress tracking:
+
+```bash
+uv run python run_web.py
+```
+
+The web interface will be available at `http://localhost:5001`
+
+### Web UI Features
+
+**Modern Dark Theme Interface:**
+- Professional glassmorphism design with dark theme
+- Responsive layout optimized for desktop and mobile
+- Sidebar navigation with intuitive menu system
+
+**Video Processing:**
+- Drag-and-drop file upload with visual feedback
+- Support for all video formats: MP4, AVI, MOV, MKV, 3GP, 3G2
+- Real-time progress tracking with WebSocket updates
+- Cancel processing capability during operation
+- Custom save location selector with directory picker
+
+**Model Management:**
+- Interactive model selection with descriptions
+- 6 AI models optimized for different content types
+- Automatic 3GP optimization suggestions
+- Model performance indicators
+
+**Storage Management:**
+- Real-time storage usage monitoring
+- One-click cleanup for uploads, processed files, and database
+- Storage breakdown by category (uploads, processed, database)
+- Automatic space calculation and reporting
+
+**Menu System:**
+- **Video Upscaler**: Main upload and processing interface
+- **Batch Processing**: Multiple file processing (coming soon)
+- **AI Models**: Model information and management
+- **3GP Test**: Mobile video optimization testing
+- **Download Models**: Model download interface
+- **Storage Management**: Disk space and cleanup tools
+- **Help & Documentation**: User guides and tips
+
+### Web UI Advantages
+
+- **User-Friendly**: No command-line knowledge required
+- **Visual Feedback**: Real-time progress bars and status updates
+- **File Management**: Custom save locations and organized storage
+- **Error Handling**: Clear error messages and recovery options
+- **Accessibility**: Works on any device with a web browser
 
 ## Cleanup & Maintenance
 

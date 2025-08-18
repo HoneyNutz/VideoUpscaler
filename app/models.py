@@ -57,7 +57,15 @@ class ProcessingTask(Base):
 DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///video_upscaler.db')
 
 # Create engine and session factory
-engine = create_engine(DATABASE_URL, echo=False)
+if DATABASE_URL.startswith('sqlite'):
+    # Allow SQLite connections to be used across threads (required for background workers)
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        connect_args={'check_same_thread': False}
+    )
+else:
+    engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def create_tables():
