@@ -42,6 +42,8 @@ def main():
                       help='File extensions to process in batch mode')
     parser.add_argument('--batch', action='store_true',
                       help='Process all video files in the input directory')
+    parser.add_argument('--benchmark', action='store_true', 
+                        help='Run performance benchmark on all models using the input video')
     
     args = parser.parse_args()
     
@@ -81,8 +83,12 @@ def main():
             return 1
     
     # Validate input for non-test modes
-    if not args.test_3gp and not args.list_models and not args.cleanup and not args.input:
-        parser.error("Input file or directory is required unless using --test-3gp, --list-models, or --cleanup")
+    if not args.input and not any([args.list_models, args.test_3gp, args.cleanup]):
+        parser.error("Input file or directory is required unless using --list-models, --test-3gp, or --cleanup")
+
+    # Handle benchmark mode
+    if args.benchmark:
+        return handle_benchmark_mode(args)
     
     # Handle batch mode
     if args.batch:
@@ -153,6 +159,100 @@ def main():
             os.remove(args.output)
         return 1
     
+    return 0
+
+def handle_benchmark_mode(args):
+    """Handle model performance benchmarking."""
+    import time
+    import json
+    import cv2
+
+    input_path = Path(args.input)
+    if not input_path.is_file():
+        print(f"❌ Input for benchmark must be a file: {input_path}")
+        return 1
+
+    models = VideoProcessor.get_available_models()
+    results = []
+    
+    # Get video info once
+    try:
+        cap = cv2.VideoCapture(str(input_path))
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps_video = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap.release()
+        if total_frames <= 0:
+            raise ValueError("Could not read frame count from video.")
+    except Exception as e:
+        print(f"❌ Error reading video info: {e}")
+        return 1
+
+    print(f"🚀 Starting benchmark for {len(models)} models on '{input_path.name}' ({width}x{height}, {total_frames} frames)..." )
+    print("=" * 70)
+
+    for model_name, model_info in models.items():
+        print(f"\nBenchmarking model: {model_name}...")
+        
+        output_path = input_path.parent / f"{input_path.stem}_benchmark_{model_name}.mp4"
+
+        try:
+            processor = VideoProcessor(
+                model_name=model_name,
+                scale=model_info['scale'],
+                tile=args.tile,
+                fp32=args.fp32,
+                progress_callback=lambda p, s: None  # Suppress progress output
+            )
+
+            start_time = time.perf_counter()
+            processor.process_video(str(input_path), str(output_path))
+            end_time = time.perf_counter()
+            duration = end_time - start_time
+            
+            processing_fps = total_frames / duration if duration > 0 else 0
+
+            results.append({
+                'model': model_name,
+                'scale': model_info['scale'],
+                'time_seconds': round(duration, 2),
+                'fps': round(processing_fps, 2),
+                'status': 'Success'
+            })
+            print(f"✅ Completed in {duration:.2f}s ({processing_fps:.2f} FPS)")
+
+            if os.path.exists(output_path):
+                os.remove(output_path)
+
+        except Exception as e:
+            print(f"❌ Failed: {e}")
+            results.append({
+                'model': model_name,
+                'scale': model_info['scale'],
+                'time_seconds': 0,
+                'fps': 0,
+                'status': 'Failed'
+            })
+
+    print("\n\n📊 Benchmark Results:")
+    print("=" * 70)
+    # Simple print formatting
+    header = f"{'Model':<30} | {'Scale':<5} | {'Time (s)':<10} | {'FPS':<10} | {'Status'}"
+    print(header)
+    print("-" * len(header))
+    for res in results:
+        row = f"{res['model']:<30} | {str(res['scale']) + 'x':<5} | {res['time_seconds']:<10.2f} | {res['fps']:<10.2f} | {res['status']}"
+        print(row)
+        
+    # Save results to a file for the web UI
+    results_path = Path('app/static/data/benchmark_results.json')
+    results_path.parent.mkdir(exist_ok=True, parents=True)
+    with open(results_path, 'w') as f:
+        json.dump(results, f, indent=4)
+        
+    print(f"\n💾 Benchmark results saved to {results_path}")
+    print("Benchmark finished.")
     return 0
 
 def handle_batch_mode(args):

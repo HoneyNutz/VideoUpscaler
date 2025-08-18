@@ -1,316 +1,588 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card p-6 mb-6">
-    <div id="upload-container" class="dropzone p-8 text-center cursor-pointer">
-        <div class="mb-4">
-            <i class="fas fa-cloud-upload-alt text-4xl text-gray-500"></i>
+<!-- Section Container -->
+<div id="section-container">
+    <!-- Video Upscaler Section -->
+    <div id="upscaler-section" class="section active">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-video text-indigo-400"></i>
+                    Video Upscaler
+                </h2>
+                <p class="text-gray-400">Enhance your videos using AI-powered upscaling</p>
+            </div>
+            
+            <div id="upload-container" class="dropzone p-4 sm:p-6 md:p-12 text-center cursor-pointer mb-8">
+                <div class="mb-6">
+                    <i class="fas fa-cloud-upload-alt text-6xl text-gray-500 mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Drop your video here</h3>
+                    <p class="text-gray-400 mb-4">or click to browse files</p>
+                    
+                    <div class="flex flex-wrap justify-center gap-2 mb-4">
+                        <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">.mp4</span>
+                        <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">.avi</span>
+                        <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">.mov</span>
+                        <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">.mkv</span>
+                        <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">.3gp</span>
+                        <span class="px-3 py-1 bg-gray-700 rounded-full text-sm">.3g2</span>
+                    </div>
+                    
+                    <p class="text-xs text-gray-500">Maximum file size: 2GB</p>
+                </div>
+                <input type="file" id="file-input" class="hidden" accept="video/*,.3gp,.3g2">
+                <div id="selected-file" class="hidden mt-4 p-3 bg-gray-800/50 rounded-lg border border-gray-700 text-sm">
+                    <i class="fas fa-file-video text-indigo-400 mr-2"></i>
+                    <span class="text-gray-300">Selected file:</span>
+                    <span id="selected-file-name" class="font-semibold ml-2"></span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium mb-3">Upscale Factor</label>
+                    <select id="scale" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <option value="2">2x Enhancement</option>
+                        <option value="4" selected>4x Enhancement</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-3">AI Model</label>
+                    <select id="model" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        <option value="RealESRGAN_x4plus" selected>RealESRGAN x4+ (General)</option>
+                        <option value="realesr-general-x4v3">General v3 (Balanced)</option>
+                        <option value="RealESRNet_x4plus">RealESRNet x4+ (Detail)</option>
+                        <option value="RealESRGAN_x2plus">RealESRGAN x2+ (Fast)</option>
+                        <option value="realesr-animevideov3">Anime Video v3</option>
+                        <option value="RealESRGAN_x4plus_anime_6B">Anime Compact</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="model-description" class="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-indigo-400 mt-1"></i>
+                    <p class="text-sm text-gray-300">Best for 3GP mobile videos, photos, and real-world content</p>
+                </div>
+            </div>
+            
+            <!-- Save Location moved to success section -->
+
+            <div class="mt-6">
+                <button id="process-btn" class="btn btn-primary w-full" disabled>
+                    <i class="fas fa-play"></i>
+                    Process Video
+                </button>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-gray-700">
+                <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+                <div id="task-list" class="space-y-2 max-h-48 overflow-y-auto">
+                    <!-- Tasks will be loaded here by JavaScript -->
+                </div>
+            </div>
         </div>
-        <h3 class="text-xl font-semibold mb-2">Drag & Drop your video here</h3>
-        <p class="text-gray-400 mb-4">or click to browse files</p>
-        <p class="text-sm text-blue-400 mb-2">📱 3GP files supported - 6 AI models available!</p>
-        <div class="text-xs text-gray-500 mt-2">
-            <span class="inline-block bg-gray-700 px-2 py-1 rounded mr-2 mb-1">.mp4</span>
-            <span class="inline-block bg-gray-700 px-2 py-1 rounded mr-2 mb-1">.avi</span>
-            <span class="inline-block bg-gray-700 px-2 py-1 rounded mr-2 mb-1">.mov</span>
-            <span class="inline-block bg-gray-700 px-2 py-1 rounded mr-2 mb-1">.mkv</span>
-            <span class="inline-block bg-blue-600 px-2 py-1 rounded mr-2 mb-1">.3gp</span>
-            <span class="inline-block bg-blue-600 px-2 py-1 rounded mr-2 mb-1">.3g2</span>
-        </div>
-        <input type="file" id="file-input" class="hidden" accept="video/*,.3gp,.3g2">
     </div>
     
-    <div id="settings" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Upscale Factor</label>
-            <select id="scale" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
-                <option value="2">2x</option>
-                <option value="4" selected>4x</option>
-            </select>
+    <!-- Progress Section -->
+    <div id="progress-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-cog fa-spin text-indigo-400"></i>
+                    Processing Video
+                </h2>
+                <p class="text-gray-400">AI enhancement in progress</p>
+            </div>
+            
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-lg font-semibold" id="status-text">Initializing...</span>
+                    <span class="text-2xl font-bold text-indigo-400" id="progress-text">0%</span>
+                </div>
+                
+                <div class="progress-bar mb-6">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                
+                <div class="flex justify-center">
+                    <button id="cancel-btn" class="btn btn-danger">
+                        <i class="fas fa-stop"></i>
+                        Cancel Processing
+                    </button>
+                </div>
+            </div>
         </div>
-        <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">AI Model</label>
-            <select id="model" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white">
-                <option value="RealESRGAN_x4plus">🎯 General Purpose (Best for 3GP) - 67MB</option>
-                <option value="realesr-general-x4v3" selected>✨ General Balanced (Recommended) - 32MB</option>
-                <option value="RealESRNet_x4plus">🔍 Enhanced Detail Preservation - 67MB</option>
-                <option value="RealESRGAN_x2plus">⚡ 2x Upscaling (Faster) - 67MB</option>
-                <option value="realesr-animevideov3">🎨 Anime Video (Temporal Consistency) - 32MB</option>
-                <option value="RealESRGAN_x4plus_anime_6B">🚀 Anime Images (Small & Fast) - 17MB</option>
-            </select>
-            <div class="text-xs text-gray-400 mt-1">
-                <span id="model-description">Balanced model with good quality and performance</span>
+    </div>
+    
+    <!-- Success Section -->
+    <div id="success-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8 text-center">
+            <div class="mb-8">
+                <i class="fas fa-check-circle text-6xl text-green-400 mb-4"></i>
+                <h2 class="text-2xl font-bold mb-2 text-green-400">Enhancement Complete!</h2>
+                <p class="text-gray-400">Your video has been successfully enhanced</p>
+            </div>
+            
+            <div class="mt-6 text-left max-w-xl mx-auto">
+                <label class="block text-sm font-medium mb-3">Server Save Path (optional)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="final-save-location" placeholder="Enter server path (e.g., /Users/alex/Videos) (optional)" 
+                           class="flex-1 p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Enter a server path to copy the file on the server. To save locally, use "Save to Local Folder" or leave empty to download.</p>
+                <div id="save-status" class="hidden mt-4 p-3 bg-gray-800/50 rounded-lg border border-gray-700 text-sm text-gray-300"></div>
+            </div>
+
+            <div class="space-y-4 mt-6">
+                <button id="save-btn" class="btn btn-primary w-full">
+                    <i class="fas fa-save"></i>
+                    Save Enhanced Video
+                </button>
+                <button id="save-local-btn" class="btn btn-secondary w-full">
+                    <i class="fas fa-folder"></i>
+                    Save to Local Folder (Chrome/Edge)
+                </button>
+                <p class="text-xs text-gray-500">Tip: "Save to Local Folder" uses the File System Access API (available in Chromium-based browsers). Other browsers will download the file normally.</p>
+                
+                <button id="new-video-btn" class="btn btn-secondary w-full">
+                    <i class="fas fa-plus"></i>
+                    Process Another Video
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error Section -->
+    <div id="error-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8 text-center">
+            <div class="mb-8">
+                <i class="fas fa-exclamation-triangle text-6xl text-red-400 mb-4"></i>
+                <h2 class="text-2xl font-bold mb-2 text-red-400">Processing Failed</h2>
+                <p class="text-gray-400 mb-4">An error occurred during video enhancement</p>
+                <div class="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                    <p id="error-message" class="text-sm text-red-300"></p>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <button id="retry-btn" class="btn btn-primary w-full">
+                    <i class="fas fa-redo"></i>
+                    Try Again
+                </button>
+                
+                <button id="back-to-upload-btn" class="btn btn-secondary w-full">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Upload
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Batch Processing Section -->
+    <div id="batch-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-layer-group text-indigo-400"></i>
+                    Batch Processing
+                </h2>
+                <p class="text-gray-400">Process multiple videos at once</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div id="batch-upload-container" class="dropzone p-4 sm:p-6 md:p-8 text-center cursor-pointer">
+                        <i class="fas fa-folder text-4xl text-gray-500 mb-4"></i>
+                        <h3 class="text-lg font-semibold mb-2">Select Folder</h3>
+                        <p class="text-gray-400 mb-4">Choose a folder containing videos to process</p>
+                        <a href="#" class="menu-item" data-section="help">
+                            <i class="fas fa-question-circle w-6"></i>
+                            <span>Help & Documentation</span>
+                        </a>
+                        <a href="#" class="menu-item" data-section="storage">
+                            <i class="fas fa-hdd w-6"></i>
+                            <span>Storage Management</span>
+                        </a>
+                        <button id="batch-browse-btn" class="btn btn-primary">
+                            <i class="fas fa-folder-open"></i>
+                            Browse Folder
+                        </button>
+                        <input type="file" id="batch-directory-picker" webkitdirectory multiple style="display: none;">
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">File Extensions</label>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" checked class="rounded bg-gray-700 border-gray-600 text-indigo-600" value=".mp4">
+                                    <span class="text-sm">.mp4</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" checked class="rounded bg-gray-700 border-gray-600 text-indigo-600" value=".avi">
+                                    <span class="text-sm">.avi</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" checked class="rounded bg-gray-700 border-gray-600 text-indigo-600" value=".mov">
+                                    <span class="text-sm">.mov</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" checked class="rounded bg-gray-700 border-gray-600 text-indigo-600" value=".mkv">
+                                    <span class="text-sm">.mkv</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" checked class="rounded bg-gray-700 border-gray-600 text-indigo-600" value=".3gp">
+                                    <span class="text-sm">.3gp</span>
+                                </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" checked class="rounded bg-gray-700 border-gray-600 text-indigo-600" value=".3g2">
+                                    <span class="text-sm">.3g2</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Model</label>
+                                <select id="batch-model" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white">
+                                    <option value="RealESRGAN_x4plus">RealESRGAN x4+</option>
+                                    <option value="realesr-general-x4v3">General x4v3</option>
+                                    <option value="RealESRNet_x4plus">RealESRNet x4+</option>
+                                    <option value="RealESRGAN_x2plus">RealESRGAN x2+</option>
+                                    <option value="realesr-animevideov3">Anime Video v3</option>
+                                    <option value="RealESRGAN_x4plus_anime_6B">Anime 6B</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Scale</label>
+                                <select id="batch-scale" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white">
+                                    <option value="2">2x</option>
+                                    <option value="4" selected>4x</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="p-6 bg-gray-800/50 rounded-lg border border-gray-700">
+                        <h3 class="text-lg font-semibold mb-4">Selected Files</h3>
+                        <div id="batch-file-list" class="space-y-2 max-h-64 overflow-y-auto">
+                            <p class="text-gray-400 text-sm">No folder selected</p>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-700">
+                            <button id="start-batch-btn" class="btn btn-primary w-full" disabled>
+                                <i class="fas fa-play"></i>
+                                Start Batch Processing
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Models Section -->
+    <div id="models-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-brain text-indigo-400"></i>
+                    AI Models
+                </h2>
+                <p class="text-gray-400">Available Real-ESRGAN models</p>
+            </div>
+            
+            <div id="models-list" class="space-y-4">
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold">RealESRGAN x4+</h3>
+                            <p class="text-sm text-gray-400">Best for 3GP mobile videos and real-world content</p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-xs text-gray-500">Size: 67MB</span>
+                                <span class="text-xs text-gray-500">•</span>
+                                <span class="text-xs text-gray-500">4x upscaling</span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-green-600 rounded-full text-sm">Installed</span>
+                    </div>
+                </div>
+                
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold">General x4v3</h3>
+                            <p class="text-sm text-gray-400">Balanced model with good quality and performance</p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-xs text-gray-500">Size: 67MB</span>
+                                <span class="text-xs text-gray-500">•</span>
+                                <span class="text-xs text-gray-500">4x upscaling</span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-green-600 rounded-full text-sm">Installed</span>
+                    </div>
+                </div>
+                
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold">RealESRNet x4+</h3>
+                            <p class="text-sm text-gray-400">Enhanced detail preservation for high-quality images</p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-xs text-gray-500">Size: 67MB</span>
+                                <span class="text-xs text-gray-500">•</span>
+                                <span class="text-xs text-gray-500">4x upscaling</span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-green-600 rounded-full text-sm">Installed</span>
+                    </div>
+                </div>
+                
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold">RealESRGAN x2+</h3>
+                            <p class="text-sm text-gray-400">Faster 2x upscaling for large videos and quick processing</p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-xs text-gray-500">Size: 67MB</span>
+                                <span class="text-xs text-gray-500">•</span>
+                                <span class="text-xs text-gray-500">2x upscaling</span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-green-600 rounded-full text-sm">Installed</span>
+                    </div>
+                </div>
+                
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold">Anime Video v3</h3>
+                            <p class="text-sm text-gray-400">Specialized for anime videos with temporal consistency</p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-xs text-gray-500">Size: 67MB</span>
+                                <span class="text-xs text-gray-500">•</span>
+                                <span class="text-xs text-gray-500">4x upscaling</span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-green-600 rounded-full text-sm">Installed</span>
+                    </div>
+                </div>
+                
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold">Anime 6B</h3>
+                            <p class="text-sm text-gray-400">Compact anime model - fastest processing</p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-xs text-gray-500">Size: 17MB</span>
+                                <span class="text-xs text-gray-500">•</span>
+                                <span class="text-xs text-gray-500">4x upscaling</span>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-green-600 rounded-full text-sm">Installed</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Download Models Section -->
+    <div id="download-models-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-download text-indigo-400"></i>
+                    Download Models
+                </h2>
+                <p class="text-gray-400">Download additional AI models for video upscaling.</p>
+            </div>
+            
+            <div id="download-status" class="hidden mb-6 p-4 bg-green-900/50 border border-green-700 rounded-lg">
+                <p id="download-message" class="text-sm text-green-300"></p>
+            </div>
+
+            <div id="download-models-list" class="space-y-4">
+                <!-- Models will be dynamically loaded here, but we can have placeholders -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Section -->
+    <div id="test-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-mobile-alt text-indigo-400"></i>
+                    3GP Test
+                </h2>
+                <p class="text-gray-400">Test mobile video support</p>
+            </div>
+            
+            <div class="text-center py-12">
+                <button id="run-test-btn" class="btn btn-primary">
+                    <i class="fas fa-play"></i>
+                    Run 3GP Test
+                </button>
+            </div>
+            
+            <div id="test-output" class="mt-6 hidden">
+                <div class="bg-gray-900 rounded-lg p-4 font-mono text-sm">
+                    <div id="test-log"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Storage Section -->
+    <div id="storage-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-hdd text-indigo-400"></i>
+                    Storage Management
+                </h2>
+                <p class="text-gray-400">Manage disk space and files</p>
+            </div>
+            
+            <div id="storage-info" class="mb-8">
+                <div class="text-center py-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                    <p class="text-gray-400 mt-2">Loading storage info...</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button id="cleanup-all" class="btn btn-danger">
+                    <i class="fas fa-trash"></i>
+                    Clean Everything
+                </button>
+                <button id="cleanup-uploads" class="btn btn-secondary">
+                    <i class="fas fa-folder"></i>
+                    Clean Uploads
+                </button>
+                <button id="cleanup-processed" class="btn btn-secondary">
+                    <i class="fas fa-video"></i>
+                    Clean Processed
+                </button>
+                <button id="cleanup-database" class="btn btn-secondary">
+                    <i class="fas fa-database"></i>
+                    Clean Database
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Help Section -->
+    <!-- Benchmark Section -->
+    <div id="benchmark-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-tachometer-alt text-cyan-400"></i>
+                    Model Performance Benchmark
+                </h2>
+                <p class="text-gray-400">Performance metrics for each AI model. Results are based on the last benchmark run via the CLI.</p>
+            </div>
+            <div id="benchmark-run-info" class="mb-6 text-sm text-gray-400 bg-gray-800/50 p-4 rounded-lg">
+                To generate or update these results, run the following command in your terminal:
+                <code class="block bg-gray-900 p-2 rounded mt-2 text-green-400 text-xs">uv run python video_upscaler.py --benchmark --input /path/to/your/test-video.mp4</code>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-gray-800/60 border border-gray-700 rounded-lg">
+                    <thead>
+                        <tr class="bg-gray-900/50">
+                            <th class="p-4 text-left text-sm font-semibold text-gray-300">Model</th>
+                            <th class="p-4 text-left text-sm font-semibold text-gray-300">Scale</th>
+                            <th class="p-4 text-left text-sm font-semibold text-gray-300">Time (seconds)</th>
+                            <th class="p-4 text-left text-sm font-semibold text-gray-300">Processing FPS</th>
+                            <th class="p-4 text-left text-sm font-semibold text-gray-300">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="benchmark-table-body" class="divide-y divide-gray-700">
+                        <!-- Rows will be populated by JavaScript -->
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-gray-500">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Loading benchmark data...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="help-section" class="section hidden">
+        <div class="glass-card p-4 sm:p-6 md:p-8">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i class="fas fa-question-circle text-indigo-400"></i>
+                    Help & Documentation
+                </h2>
+                <p class="text-gray-400">Find answers and instructions here</p>
+            </div>
+
+            <div class="space-y-8">
+                <!-- How to Use -->
+                <div class="help-article">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2"><i class="fas fa-rocket text-green-400"></i>Getting Started</h3>
+                    <ol class="list-decimal list-inside space-y-3 text-gray-300">
+                        <li><b>Select a Menu Item:</b> Use the sidebar to navigate between sections like Video Upscaler, Batch Processing, and Storage Management.</li>
+                        <li><b>Select a Video:</b> In the 'Video Upscaler' section, drag & drop a video or click the upload area to choose a file. The selected filename will be displayed.</li>
+                        <li><b>Choose Settings:</b> Select your desired 'Upscale Factor' and 'AI Model'. Model descriptions are provided to help you choose.</li>
+                        <li><b>Process:</b> Click the <i>Process Video</i> button to start. Monitor the progress bar and status updates.</li>
+                        <li><b>(Optional) Set Save Location after Processing:</b> In the success screen, choose a server folder where the enhanced video should be saved. If left empty, the video will be downloaded to your device.</li>
+                        <li><b>Save Your Video:</b> In the success screen, either save to the chosen folder or download directly.</li>
+                    </ol>
+                </div>
+
+                <!-- Model Guide -->
+                <div class="help-article">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2"><i class="fas fa-brain text-purple-400"></i>AI Model Guide</h3>
+                    <ul class="space-y-3 text-gray-300">
+                        <li><b>RealESRGAN x4+ (General):</b> The best all-around model for most content, including photos and real-world videos. Excellent for 3GP mobile videos.</li>
+                        <li><b>General v3 (Balanced):</b> A well-balanced model offering a good mix of quality and performance.</li>
+                        <li><b>RealESRNet x4+ (Detail):</b> Use this for videos where preserving fine details and textures is critical.</li>
+                        <li><b>RealESRGAN x2+ (Fast):</b> A 2x upscaler that is significantly faster than 4x models. Ideal for quick enhancements or very large videos.</li>
+                        <li><b>Anime Video v3:</b> Specifically trained for anime and cartoons. Provides great results with temporal consistency (less flickering).</li>
+                        <li><b>Anime Compact:</b> A smaller, faster version for anime. Good for quick processing of animated content.</li>
+                    </ul>
+                </div>
+
+                <!-- Features Explained -->
+                <div class="help-article">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2"><i class="fas fa-star text-yellow-400"></i>Features Explained</h3>
+                    <dl class="space-y-4 text-gray-300">
+                        <div>
+                            <dt class="font-semibold text-white">Batch Processing</dt>
+                            <dd>Process an entire folder of videos at once. Select the folder, choose your settings, and the app will process all supported video files inside it.</dd>
+                        </div>
+                        <div>
+                            <dt class="font-semibold text-white">Storage Management</dt>
+                            <dd>View your disk usage for uploaded and processed files. Use the cleanup buttons to clear space by deleting files from the server and clearing database records.</dd>
+                        </div>
+                        <div>
+                            <dt class="font-semibold text-white">3GP Optimization</dt>
+                            <dd>Videos in 3GP or 3G2 format are automatically converted to MP4 after upscaling, ensuring broad compatibility with modern devices and players.</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <!-- Troubleshooting -->
+                <div class="help-article">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2"><i class="fas fa-wrench text-red-400"></i>Troubleshooting</h3>
+                    <ul class="list-disc list-inside space-y-3 text-gray-300">
+                        <li><b>Processing Fails:</b> Ensure the video format is supported (MP4, AVI, MOV, MKV, 3GP, 3G2). Very long or high-resolution videos may require more system resources. Try a smaller video or the 2x model.</li>
+                        <li><b>File Too Large:</b> The maximum upload size is 2GB. For larger files, consider using the command-line interface.</li>
+                        <li><b>Slow Performance:</b> Upscaling is resource-intensive. Performance depends on your hardware (especially GPU). The 2x model is faster than 4x models.</li>
+                        <li><b>Storage Cleanup Not Working:</b> If the buttons don't seem to work, try reloading the page. If the issue persists, there may be a backend server issue.</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-<div id="progress-container" class="card p-6 mb-6 hidden">
-    <h3 class="text-lg font-semibold mb-4">Processing Video</h3>
-    <div class="mb-2 flex justify-between">
-        <span id="status-text">Preparing...</span>
-        <span id="progress-text">0%</span>
-    </div>
-    <div class="progress-bar mb-4">
-        <div id="progress-fill" class="progress-fill"></div>
-    </div>
-    <div id="download-section" class="hidden text-center mt-6">
-        <p class="text-green-400 mb-4">Processing complete!</p>
-        <a id="download-btn" href="#" class="btn-primary inline-block px-6 py-2 rounded-md">
-            <i class="fas fa-download mr-2"></i>Download Video
-        </a>
-    </div>
-    <div id="error-section" class="hidden text-center mt-6">
-        <p class="text-red-400 mb-4">An error occurred during processing.</p>
-        <p id="error-message" class="text-sm text-gray-400 mb-4"></p>
-        <button onclick="window.location.reload()" class="px-4 py-2 bg-gray-600 rounded-md hover:bg-gray-500">
-            Try Again
-        </button>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const dropzone = document.getElementById('upload-container');
-        const fileInput = document.getElementById('file-input');
-        const progressContainer = document.getElementById('progress-container');
-        const progressBar = document.getElementById('progress-fill');
-        const progressText = document.getElementById('progress-text');
-        const statusText = document.getElementById('status-text');
-        const downloadSection = document.getElementById('download-section');
-        const downloadBtn = document.getElementById('download-btn');
-        const errorSection = document.getElementById('error-section');
-        const errorMessage = document.getElementById('error-message');
-        
-        let currentTaskId = null;
-        let outputFilename = null;
-        
-        // Initialize Socket.IO
-        const socket = io();
-        
-        // Handle drag and drop
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, preventDefaults, false);
-        });
-        
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropzone.addEventListener(eventName, highlight, false);
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropzone.addEventListener(eventName, unhighlight, false);
-        });
-        
-        function highlight() {
-            dropzone.classList.add('dragover');
-        }
-        
-        function unhighlight() {
-            dropzone.classList.remove('dragover');
-        }
-        
-        // Handle file drop
-        dropzone.addEventListener('drop', handleDrop, false);
-        dropzone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileSelect, false);
-        
-        // Model selection handler
-        const modelSelect = document.getElementById('model');
-        const modelDescription = document.getElementById('model-description');
-        
-        const modelDescriptions = {
-            'RealESRGAN_x4plus': 'Best for 3GP mobile videos, photos, and real-world content',
-            'realesr-general-x4v3': 'Balanced model with good quality and performance',
-            'RealESRNet_x4plus': 'Enhanced detail preservation for high-quality images',
-            'RealESRGAN_x2plus': 'Faster 2x upscaling for large videos and quick processing',
-            'realesr-animevideov3': 'Specialized for anime videos with temporal consistency',
-            'RealESRGAN_x4plus_anime_6B': 'Compact anime model - fastest processing'
-        };
-        
-        modelSelect.addEventListener('change', function() {
-            const selectedModel = this.value;
-            modelDescription.textContent = modelDescriptions[selectedModel] || 'Select a model for upscaling';
-        });
-        
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files);
-        }
-        
-        function handleFileSelect(e) {
-            const files = e.target.files;
-            handleFiles(files);
-        }
-        
-        function handleFiles(files) {
-            if (files.length === 0) return;
-            
-            const file = files[0];
-            const fileName = file.name.toLowerCase();
-            const is3GP = fileName.endsWith('.3gp') || fileName.endsWith('.3g2');
-            
-            // Debug logging
-            console.log('File details:', {
-                name: file.name,
-                type: file.type,
-                size: file.size,
-                fileName: fileName,
-                is3GP: is3GP
-            });
-            
-            // Check if it's a supported video file
-            const isVideoType = file.type.startsWith('video/');
-            const supportedExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm', '.3gp', '.3g2'];
-            const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
-            
-            console.log('Validation:', {
-                isVideoType: isVideoType,
-                hasValidExtension: hasValidExtension,
-                willPass: isVideoType || hasValidExtension
-            });
-            
-            if (!isVideoType && !hasValidExtension) {
-                console.error('File validation failed for:', fileName);
-                alert('Please select a video file (MP4, AVI, MOV, 3GP, etc.)');
-                return;
-            }
-            
-            console.log('File validation passed, proceeding with upload');
-            
-            // Show 3GP-specific message and suggest best model
-            if (is3GP) {
-                console.log('📱 3GP file detected - applying mobile video optimizations');
-                
-                // Suggest best model for 3GP
-                const modelSelect = document.getElementById('model');
-                const modelDescription = document.getElementById('model-description');
-                
-                if (modelSelect.value !== 'RealESRGAN_x4plus') {
-                    // Show suggestion without changing selection
-                    modelDescription.innerHTML = '<span class="text-blue-400">💡 Tip: RealESRGAN_x4plus works best for 3GP files</span>';
-                }
-            }
-            
-            uploadFile(file);
-        }
-        
-        function uploadFile(file) {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('scale', document.getElementById('scale').value);
-            formData.append('model', document.getElementById('model').value);
-            
-            // Show progress container
-            progressContainer.classList.remove('hidden');
-            dropzone.classList.add('hidden');
-            document.getElementById('settings').classList.add('hidden');
-            
-            // Reset UI
-            progressBar.style.width = '0%';
-            progressText.textContent = '0%';
-            statusText.textContent = 'Uploading...';
-            downloadSection.classList.add('hidden');
-            errorSection.classList.add('hidden');
-            
-            // Upload file
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                currentTaskId = data.task_id;
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showError(error.message || 'Failed to upload file');
-            });
-        }
-        
-        // Handle progress updates via WebSocket
-        socket.on('progress_update', function(data) {
-            if (data.task_id !== currentTaskId) return;
-            
-            if (data.progress !== undefined) {
-                const progress = Math.min(100, Math.max(0, data.progress));
-                progressBar.style.width = progress + '%';
-                progressText.textContent = Math.round(progress) + '%';
-            }
-            
-            if (data.status) {
-                statusText.textContent = data.status;
-            }
-            
-            if (data.status === 'completed') {
-                // Get output filename from task status
-                fetch(`/status/${currentTaskId}`)
-                    .then(response => response.json())
-                    .then(taskData => {
-                        outputFilename = taskData.output_filename;
-                        showDownload();
-                    })
-                    .catch(() => showDownload()); // Fallback if status fetch fails
-            } else if (data.status === 'failed') {
-                showError(data.error || 'An unknown error occurred');
-            }
-        });
-        
-        function showDownload() {
-            downloadSection.classList.remove('hidden');
-            if (outputFilename) {
-                downloadBtn.href = `/download/${outputFilename}`;
-            } else {
-                // Fallback: try to construct filename from task ID
-                downloadBtn.href = `/download/upscaled_${currentTaskId}`;
-            }
-        }
-        
-        function showError(message) {
-            errorSection.classList.remove('hidden');
-            errorMessage.textContent = message || 'An unknown error occurred';
-            statusText.textContent = 'Failed';
-        }
-        
-        // Check for existing task on page load
-        const urlParams = new URLSearchParams(window.location.search);
-        const taskId = urlParams.get('task_id');
-        if (taskId) {
-            currentTaskId = taskId;
-            progressContainer.classList.remove('hidden');
-            dropzone.classList.add('hidden');
-            document.getElementById('settings').classList.add('hidden');
-            
-            // Check task status
-            fetch(`/status/${taskId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'completed') {
-                        progressBar.style.width = '100%';
-                        progressText.textContent = '100%';
-                        statusText.textContent = 'Processing complete';
-                        outputFilename = data.output_filename;
-                        showDownload();
-                    } else if (data.status === 'failed') {
-                        showError(data.error || 'Processing failed');
-                    } else {
-                        // Task is still in progress
-                        progressBar.style.width = data.progress + '%';
-                        progressText.textContent = Math.round(data.progress) + '%';
-                        statusText.textContent = data.status || 'Processing...';
-                    }
-                });
-        }
-    });
-</script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% endblock %}
